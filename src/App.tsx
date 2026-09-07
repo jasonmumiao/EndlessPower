@@ -10,7 +10,9 @@ import OutletMonitorView from './components/OutletMonitorView'
 import SettingsModal from './components/SettingsModal'
 import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import DomainMigrationNotice from './components/DomainMigrationNotice'
 import Hud from './components/Hud'
+import { UsersIcon } from './components/icons'
 
 type ViewType = 'map' | 'favorites' | 'monitor'
 
@@ -71,10 +73,13 @@ export default function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         isHidden={currentView === 'monitor' || settingsOpen}
       >
-        {(isConnected || visitorsCount > 0) && (
+        {currentView !== 'map' && (
           <div className="hud-top" aria-label="在线人数">
             <Chip color={isConnected ? 'success' : 'default'} variant="secondary" size="sm">
-              在线 {visitorsCount}
+              <span className="online-chip">
+                <UsersIcon size={14} aria-hidden="true" />
+                <span className="online-chip-value">{isConnected ? visitorsCount : '—'}</span>
+              </span>
             </Chip>
           </div>
         )}
@@ -83,6 +88,7 @@ export default function App() {
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {enablePwaUi && !isAutomated && <PWAUpdatePrompt />}
       {enablePwaUi && !isAutomated && <PWAInstallPrompt />}
+      <DomainMigrationNotice />
 
       {error && (
         <div className="alert-overlay" role="alert">

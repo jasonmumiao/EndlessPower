@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Card, ListBox, SearchField } from '@heroui/react'
+import { Card, Chip, ListBox, SearchField } from '@heroui/react'
 import { useStationStore } from '../store/stationStore'
 import type { Station } from '../types/station'
+import { UsersIcon } from './icons'
 
 type SearchBarProps = {
   onStationSelect?: (station: Station) => void
+  visitorsCount?: number
+  isConnected?: boolean
 }
 
-export default function SearchBar({ onStationSelect }: SearchBarProps) {
+export default function SearchBar({ onStationSelect, visitorsCount, isConnected }: SearchBarProps) {
   const { searchKeyword, setSearchKeyword, isUsingSimulatedData, getFilteredStations } = useStationStore()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -51,6 +54,14 @@ export default function SearchBar({ onStationSelect }: SearchBarProps) {
         <SearchField.Group className="search-group">
           <SearchField.SearchIcon />
           <SearchField.Input placeholder={isUsingSimulatedData ? '搜索充电站（模拟数据）…' : '搜索充电站…'} />
+          {visitorsCount !== undefined && (
+            <Chip color={isConnected ? 'success' : 'default'} variant="flat" size="sm" className="search-online-chip">
+              <span className="online-chip">
+                <UsersIcon size={14} aria-hidden="true" />
+                <span className="online-chip-value">{isConnected ? visitorsCount : '—'}</span>
+              </span>
+            </Chip>
+          )}
           <SearchField.ClearButton />
         </SearchField.Group>
       </SearchField>

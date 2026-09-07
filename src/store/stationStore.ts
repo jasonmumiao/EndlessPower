@@ -23,13 +23,16 @@ interface StationState {
   userLocation: [number, number] | null
   searchKeyword: string
   isUsingSimulatedData: boolean
-  
+  isUsingCachedData: boolean
+  _hasHydrated: boolean
+
   // Actions
   setStations: (stations: Station[]) => void
   setLoading: (loading: boolean) => void
   setUserLocation: (location: [number, number] | null) => void
   setSearchKeyword: (keyword: string) => void
   setSimulatedData: (isSimulated: boolean) => void
+  setCachedDataStatus: (isCached: boolean) => void
   initializeStations: () => Promise<void>
   refreshStations: (lat?: number, lng?: number, options?: RefreshOptions) => Promise<void>
   canRefresh: () => boolean
@@ -68,21 +71,59 @@ export const useStationStore = create<StationState>()(
         userLocation: null,
         searchKeyword: '',
         isUsingSimulatedData: false,
+        isUsingCachedData: false,
+        _hasHydrated: false,
 
         setStations: (stations: Station[]) => set({ stations }),
         setLoading: (loading: boolean) => set({ isLoading: loading }),
         setUserLocation: (location: [number, number] | null) => set({ userLocation: location }),
         setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
         setSimulatedData: (isSimulated: boolean) => set({ isUsingSimulatedData: isSimulated }),
+        setCachedDataStatus: (isCached: boolean) => set({ isUsingCachedData: isCached }),
 
         // 初始化：有缓存则先展示缓存，再在后台拉取最新；无缓存则显示加载态。
         initializeStations: async () => {
+          // 等待持久化数据恢复完成，最多等待 1 秒避免死锁
+          const startTime = Date.now()
+          while (!get()._hasHydrated && Date.now() - startTime < 1000) {
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
+
           const { stations, lastRefresh } = get()
           const hasCachedStations = stations.length > 0
           const now = Date.now()
 
+          // 如果有缓存数据，立即设置为灰色状态，触发 MapView 重新渲染
+          if (hasCachedStations) {
+            set({ isUsingCachedData: true })
+            if (import.meta.env.DEV) {
+              console.log('[StationStore] 发现缓存数据，设置为灰色状态:', {
+                stationsCount: stations.length,
+                lastRefresh: lastRefresh ? new Date(lastRefresh).toISOString() : 'never',
+                age: lastRefresh ? `${Math.round((now - lastRefresh) / 1000)}s ago` : 'N/A'
+              })
+            }
+          }
+
+          if (import.meta.env.DEV) {
+            console.log('[StationStore] initializeStations:', {
+              hasHydrated: get()._hasHydrated,
+              hasCachedStations,
+              stationsCount: stations.length,
+              isUsingCachedData: get().isUsingCachedData
+            })
+          }
+
           // 避免用户短时间内刷新/重进导致重复请求
-          if (hasCachedStations && now - lastRefresh < BOOT_REVALIDATE_COOLDOWN) return
+          // 如果数据很新鲜（< 10秒），后台静默刷新，不显示 loading
+          const shouldSkipRefresh = hasCachedStations && now - lastRefresh < BOOT_REVALIDATE_COOLDOWN
+          if (shouldSkipRefresh) {
+            // 数据很新鲜，但仍然后台刷新以清除灰色状态
+            if (import.meta.env.DEV) console.log('[StationStore] 数据新鲜，后台刷新以清除灰色状态')
+          } else if (hasCachedStations) {
+            // 数据不够新鲜，刷新中
+            if (import.meta.env.DEV) console.log('[StationStore] 数据不新鲜，刷新中...')
+          }
 
           let location: [number, number] | null = null
           try {
@@ -117,7 +158,8 @@ export const useStationStore = create<StationState>()(
             if (nearStations?.length > 0) {
               set({
                 stations: applyJitter(nearStations),
-                lastRefresh: Date.now()
+                lastRefresh: Date.now(),
+                isUsingCachedData: false // 获取到新数据后，清除缓存状态标记
               })
             }
           } catch (error) {
@@ -155,10 +197,38 @@ export const useStationStore = create<StationState>()(
     },
     {
       name: 'station-data',
-      partialize: (state) => ({ 
+      partialize: (state) => ({
         stations: state.stations,
         lastRefresh: state.lastRefresh
       }),
+      merge: (persistedState, currentState) => {
+        const merged = { ...currentState, ...persistedState as Partial<StationState> }
+        // 如果恢复的数据中有 stations，立即设置为灰色状态
+        if (persistedState && 'stations' in persistedState &&
+            Array.isArray(persistedState.stations) && persistedState.stations.length > 0) {
+          merged.isUsingCachedData = true
+          if (import.meta.env.DEV) {
+            console.log('[StationStore] Merge: 发现缓存数据，设置为灰色状态')
+          }
+        }
+        return merged
+      },
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (!error && state) {
+            // 数据恢复完成后设置标记
+            state._hasHydrated = true
+
+            if (import.meta.env.DEV) {
+              console.log('[StationStore] Hydration 完成:', {
+                stationsCount: state.stations?.length ?? 0,
+                lastRefresh: state.lastRefresh ? new Date(state.lastRefresh).toISOString() : 'never',
+                isUsingCachedData: state.isUsingCachedData
+              })
+            }
+          }
+        }
+      },
     }
   )
 )

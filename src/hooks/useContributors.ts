@@ -16,10 +16,11 @@ export const useContributors = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [hasAttempted, setHasAttempted] = useState(false)
 
   const loadContributors = useCallback(async (force = false) => {
     // 防重复请求，除非强制刷新
-    if (!force && (isLoading || (contributors.length > 0 && lastUpdated && Date.now() - lastUpdated.getTime() < 5 * 60 * 1000))) {
+    if (!force && (isLoading || (hasAttempted && lastUpdated && Date.now() - lastUpdated.getTime() < 5 * 60 * 1000))) {
       return
     }
 
@@ -42,8 +43,9 @@ export const useContributors = () => {
       console.error('Failed to load contributors:', err)
     } finally {
       setIsLoading(false)
+      setHasAttempted(true)
     }
-  }, [isLoading, contributors.length, lastUpdated])
+  }, [isLoading, hasAttempted, lastUpdated])
 
   // 组件挂载时自动加载
   useEffect(() => {

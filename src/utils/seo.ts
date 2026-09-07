@@ -26,7 +26,7 @@ const defaultSEO: Required<SEOConfig> = {
     '电动车充电', '新能源充电', '充电桩分布', '充电服务'
   ],
   image: '/pwa-512x512.svg',
-  url: 'https://endlesspower.karanocave.workers.dev',
+  url: 'https://issks.sile.mom',
   type: 'website',
   author: 'EndlessPower Team',
   locale: 'zh_CN',

@@ -1,5 +1,5 @@
 # robots.txt for EndlessPower - 充电桩查询应用
-# https://endlesspower.karanocave.workers.dev
+# https://issks.sile.mom
 
 User-agent: *
 Allow: /
@@ -31,7 +31,7 @@ Disallow: /_*
 Disallow: /offline.html
 
 # 网站地图
-Sitemap: https://endlesspower.karanocave.workers.dev/sitemap.xml
+Sitemap: https://issks.sile.mom/sitemap.xml
 
 # 爬取频率建议
 Crawl-delay: 1

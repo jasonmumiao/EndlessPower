@@ -7,7 +7,7 @@
 
   <!-- 首页 -->
   <url>
-    <loc>https://endlesspower.karanocave.workers.dev/</loc>
+    <loc>https://issks.sile.mom/</loc>
     <lastmod>2025-09-26</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -16,7 +16,7 @@
 
   <!-- 收藏页面 -->
   <url>
-    <loc>https://endlesspower.karanocave.workers.dev/#/favorites</loc>
+    <loc>https://issks.sile.mom/#/favorites</loc>
     <lastmod>2025-09-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -25,7 +25,7 @@
 
   <!-- PWA清单文件 -->
   <url>
-    <loc>https://endlesspower.karanocave.workers.dev/manifest.webmanifest</loc>
+    <loc>https://issks.sile.mom/manifest.webmanifest</loc>
     <lastmod>2025-09-26</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

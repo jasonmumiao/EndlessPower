@@ -187,7 +187,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <Text style={{ display: 'block' }}>环境：{envText}</Text>
                 <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
                   <a href="https://github.com/jasonmumiao/EndlessPower" target="_blank" rel="noopener noreferrer">GitHub</a>
-                  <a href="http://endlesspower.icu/" target="_blank" rel="noopener noreferrer">官网</a>
+                  <a href="https://issks.sile.mom/" target="_blank" rel="noopener noreferrer">官网</a>
                 </div>
                 {isOpen && <ContributorsSection />}
               </div>

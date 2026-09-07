@@ -4,6 +4,7 @@ import { Button, Card } from '@heroui/react'
 import { useStationStore } from '../store/stationStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useThemeStore } from '../store/themeStore'
+import { useVisitorsCount } from '../hooks/useVisitorsCount'
 import type { Station } from '../types/station'
 import { getColorForAvailability } from '../utils/api'
 import SearchBar from './SearchBar'
@@ -186,7 +187,10 @@ function enable3DBuildings(map: maplibregl.Map, isDark: boolean) {
   )
 }
 
-function getStationMarkerColor(station: Station) {
+function getStationMarkerColor(station: Station, isUsingCachedData: boolean) {
+  // 如果使用缓存数据，所有标记显示为灰色
+  if (isUsingCachedData) return '#9ca3af'
+
   const free = station.freeNum
   const total = station.switchType
   if (free == null || total == null || total === 0) return '#9ca3af'
@@ -207,6 +211,7 @@ export default function MapView() {
 
   const { isDark } = useThemeStore()
   const { showUnavailableStations, autoRefresh, refreshInterval, baseMapStyle } = useSettingsStore()
+  const { visitorsCount, isConnected } = useVisitorsCount()
   const {
     stations: allStations,
     getFilteredStations,
@@ -215,7 +220,8 @@ export default function MapView() {
     refreshStations,
     canRefresh,
     userLocation,
-    setUserLocation: setStoreUserLocation
+    setUserLocation: setStoreUserLocation,
+    isUsingCachedData
   } = useStationStore()
 
   const stations = getFilteredStations()
@@ -223,9 +229,24 @@ export default function MapView() {
   const hasAnyStations = allStations.length > 0
 
   const displayStations = useMemo(() => {
+    // 使用缓存数据时（灰色状态），显示所有站点，不过滤
+    if (isUsingCachedData) return stations
     if (showUnavailableStations) return stations
     return stations.filter((s) => (s.freeNum ?? 0) > 0)
-  }, [stations, showUnavailableStations])
+  }, [stations, showUnavailableStations, isUsingCachedData])
+
+  // 调试日志
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('[MapView] 状态更新:', {
+        allStationsCount: allStations.length,
+        filteredStationsCount: stations.length,
+        displayStationsCount: displayStations.length,
+        isUsingCachedData,
+        showUnavailableStations
+      })
+    }
+  }, [allStations.length, stations.length, displayStations.length, isUsingCachedData, showUnavailableStations])
 
   const styleUrl = useMemo(() => {
     if (MAP_STYLE_OVERRIDE) return MAP_STYLE_OVERRIDE
@@ -258,7 +279,6 @@ export default function MapView() {
       antialias: true
     } as any)
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left')
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left')
 
@@ -383,14 +403,15 @@ export default function MapView() {
       const el = document.createElement('button')
       el.type = 'button'
       el.className = 'station-marker'
-      el.style.backgroundColor = getStationMarkerColor(station)
-      el.setAttribute('aria-label', station.stationName)
+      el.style.backgroundColor = getStationMarkerColor(station, isUsingCachedData)
+      el.textContent = String(station.freeNum ?? 0)
+      el.setAttribute('aria-label', `${station.stationName}，可用${station.freeNum ?? 0}个`)
       el.addEventListener('click', () => setSelectedStation(station))
       return new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([station.longitude, station.latitude])
         .addTo(map)
     })
-  }, [displayStations])
+  }, [displayStations, isUsingCachedData])
 
   const handleRefresh = async () => {
     if (!canRefresh()) return
@@ -464,6 +485,8 @@ export default function MapView() {
               map?.easeTo({ center: [station.longitude, station.latitude], zoom: 18, duration: 800 })
               setSelectedStation(station)
             }}
+            visitorsCount={visitorsCount}
+            isConnected={isConnected}
           />
         </div>
 

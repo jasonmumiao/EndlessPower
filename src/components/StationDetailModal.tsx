@@ -14,11 +14,11 @@ type StationDetailModalProps = {
   onClose: () => void
 }
 
-type OutletFilter = 'all' | 'available' | 'occupied' | 'unknown'
+type OutletFilter = 'all' | 'available' | 'occupied'
 const OUTLET_FILTER_STORAGE_KEY = 'outlet-filter'
 
 function parseOutletFilter(value: string | null): OutletFilter {
-  if (value === 'available' || value === 'occupied' || value === 'unknown') return value
+  if (value === 'available' || value === 'occupied') return value
   return 'all'
 }
 
@@ -216,8 +216,7 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
 	                    {([
 	                      ['all', `全部 ${outletCounts.all}`],
 	                      ['available', `可用 ${outletCounts.available}`],
-	                      ['occupied', `占用 ${outletCounts.occupied}`],
-	                      ['unknown', `未知 ${outletCounts.unknown}`]
+	                      ['occupied', `占用 ${outletCounts.occupied}`]
 	                    ] as const).map(([key, label]) => (
 	                      <button
 	                        key={key}
@@ -263,7 +262,7 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
                       visibleOutlets.map((outlet) => {
                         const status = statusByOutletNo[outlet.outletNo] ?? null
                         const available = status ? isOutletAvailable(status) : false
-                        const statusKind: OutletFilter = !status ? 'unknown' : available ? 'available' : 'occupied'
+                        const statusKind: OutletFilter = available ? 'available' : 'occupied'
                         const name =
                           status?.outlet?.vOutletName?.replace('插座', '').trim() ||
                           outlet.vOutletName?.replace('插座', '').trim() ||
@@ -272,17 +271,17 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
 
                         const label = `插座 ${name}`
                         const subtitle = (() => {
-                          if (!status) return '未获取状态'
                           if (available) return '空闲中'
-                          const power = status.powerFee?.billingPower ?? '未知功率'
-                          const fee = `¥${(status.usedfee ?? 0).toFixed(2)}`
-                          const duration = `${status.usedmin ?? 0} 分钟`
-                          return `${power} · ${fee} · ${duration}`
+                          if (!status) return '未获取状态'
+                          const power = status.powerFee?.billingPower ?? '?'
+                          const fee = (status.usedfee ?? 0).toFixed(2)
+                          const duration = status.usedmin ?? 0
+                          return `${power} ${fee}元 ${duration}分`
                         })()
 
                         const statusChip = (() => {
-                          if (!status) return <Chip variant="secondary" size="sm">未知</Chip>
                           if (available) return <Chip color="success" variant="secondary" size="sm">可用</Chip>
+                          if (!status) return <Chip variant="secondary" size="sm">未知</Chip>
                           return <Chip color="warning" variant="secondary" size="sm">占用</Chip>
                         })()
 

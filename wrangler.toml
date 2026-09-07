@@ -38,6 +38,10 @@ name = "endlesspower"
 main = "src/worker/index.ts"
 compatibility_date = "2025-12-01"
 vars = { NODE_ENV = "production" }
+routes = [
+  { pattern = "endlesspower.icu", custom_domain = true },
+  { pattern = "issks.sile.mom", custom_domain = true }
+]
 
 [env.production.assets]
 directory = "./dist"
@@ -45,4 +49,3 @@ directory = "./dist"
 [[env.production.durable_objects.bindings]]
 name = "VISITORS_COUNTER"
 class_name = "VisitorsCounter"
-
