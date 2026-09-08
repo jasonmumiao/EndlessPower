@@ -16,6 +16,20 @@ import { gcj02ToWgs84, isInChina, wgs84ToGcj02 } from './coords'
 
 const JITTER_AMOUNT = 0.0004
 
+class ApiError extends Error {
+  readonly url: string
+  readonly status?: number
+  readonly code?: string
+
+  constructor(message: string, url: string, options: { status?: number; code?: string } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.url = url
+    this.status = options.status
+    this.code = options.code
+  }
+}
+
 // CORS代理列表（按优先级排序）
 const CORS_PROXIES = [
   { 
@@ -42,7 +56,8 @@ const CORS_PROXIES = [
 
 // CORS代理和基础API函数
 async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T | null> {
-  
+  let lastError: unknown = null
+
   // 首先尝试直接请求（可能在某些环境下可行）
   try {
     if (ENABLE_DEBUG) console.log(`🔄 尝试直接请求: ${url}`)
@@ -55,26 +70,35 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T | 
       }
     })
     
-    if (response.ok) {
-      const data: ApiResponse<T> = await response.json()
-      if (data.code === "1") {
-        if (ENABLE_DEBUG) console.log(`✅ 直接请求成功`)
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('api-using-real-data'))
-        }
-        return data.data
-      }
+    const data: ApiResponse<T> = await response.json()
+    if (!response.ok) {
+      throw new ApiError(data.msg || `HTTP error: ${response.status}`, url, {
+        status: response.status,
+        code: data.code
+      })
     }
+    if (data.code !== '1') {
+      throw new ApiError(data.msg || 'API error', url, { code: data.code })
+    }
+    if (ENABLE_DEBUG) console.log(`✅ 直接请求成功`)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('api-using-real-data'))
+    }
+    return data.data
   } catch (error) {
+    lastError = error
     if (ENABLE_DEBUG) console.warn(`❌ 直接请求失败，尝试代理服务`, error)
   }
 
   // 相对路径无法通过第三方代理转发
   if (url.startsWith('/')) {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('api-fallback-to-simulation'))
+    if (import.meta.env.DEV && import.meta.env.VITE_USE_SIMULATED_DATA === '1') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('api-fallback-to-simulation'))
+      }
+      return getSimulatedData<T>(url)
     }
-    return getSimulatedData<T>(url)
+    throw lastError instanceof Error ? lastError : new ApiError('API 请求失败', url)
   }
   
   // 尝试每个代理服务
@@ -93,14 +117,10 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T | 
           }
         })
         
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
+        if (!response.ok) throw new ApiError(`HTTP error: ${response.status}`, url, { status: response.status })
         
         const result = (await response.json()) as any
-        if (result.status?.http_code !== 200) {
-          throw new Error(`Proxy error: ${result.status?.http_code}`)
-        }
+        if (result.status?.http_code !== 200) throw new ApiError(`Proxy error: ${result.status?.http_code}`, url)
         
         // 尝试解析内容
         let contents = result.contents
@@ -108,13 +128,13 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T | 
           try {
             contents = JSON.parse(contents)
         } catch {
-          throw new Error('JSON 解析失败')
+          throw new ApiError('JSON 解析失败', url)
         }
         }
         
         const data: ApiResponse<T> = contents
         if (data.code !== "1") {
-          throw new Error(data.msg || 'API error')
+          throw new ApiError(data.msg || 'API error', url, { code: data.code })
         }
         
         if (ENABLE_DEBUG) console.log(`✅ 代理成功: ${proxy.url}`)
@@ -135,13 +155,11 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T | 
           body: options.body
         })
         
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
+        if (!response.ok) throw new ApiError(`HTTP error: ${response.status}`, url, { status: response.status })
         
         const data: ApiResponse<T> = await response.json()
         if (data.code !== "1") {
-          throw new Error(data.msg || 'API error')
+          throw new ApiError(data.msg || 'API error', url, { code: data.code })
         }
         
         if (ENABLE_DEBUG) console.log(`✅ 代理成功: ${proxy.url}`)
@@ -151,20 +169,21 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T | 
         return data.data
       }
     } catch (error) {
+      lastError = error
       if (ENABLE_DEBUG) console.warn(`❌ 代理失败: ${proxy.url}`, error)
       continue
     }
   }
   
-  // 所有代理都失败了，返回模拟数据
-  console.error(`💥 所有CORS代理都失败了，返回模拟数据`)
-  
-  // 通知 store 使用了模拟数据
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('api-fallback-to-simulation'))
+  if (import.meta.env.DEV && import.meta.env.VITE_USE_SIMULATED_DATA === '1') {
+    console.warn(`所有 API 请求失败，开发模式使用模拟数据`, lastError)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('api-fallback-to-simulation'))
+    }
+    return getSimulatedData<T>(url)
   }
-  
-  return getSimulatedData<T>(url)
+
+  throw lastError instanceof Error ? lastError : new ApiError('API 请求失败', url)
 }
 
 // 模拟数据生成器

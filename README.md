@@ -49,3 +49,4 @@ npm run build
 ## 🔧 环境变量
 
 - `VITE_MAP_STYLE`：覆盖地图样式 URL（用于 E2E / 自定义底图）
+- `VITE_USE_SIMULATED_DATA=1`：仅开发模式启用 API 模拟数据；生产构建始终在 API 失败时报告错误。

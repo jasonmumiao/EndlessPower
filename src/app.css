@@ -933,6 +933,11 @@
   background: var(--soft-accent);
 }
 
+.outlet-card.is-unknown {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
 .outlet-hover {
   position: absolute;
   inset: 0;
@@ -998,6 +1003,11 @@
 .outlet-badge.is-occupied {
   background: var(--soft-accent);
   color: var(--accent);
+}
+
+.outlet-badge.is-unknown {
+  background: var(--default);
+  color: var(--muted);
 }
 
 .outlet-card-bottom {
@@ -1142,9 +1152,15 @@
 
 .fav-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+
+@media (max-width: 420px) {
+  .fav-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .fav-summary-item {

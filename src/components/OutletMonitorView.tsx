@@ -119,7 +119,7 @@ export default function OutletMonitorView({ onBack }: OutletMonitorViewProps) {
       const status = await fetchOutletStatus(currentTarget.outlet.outletNo)
       if (status && status.outlet) {
         const powerStr = status.powerFee?.billingPower || '0W'
-        const powerMatch = powerStr.match(/(\\d+\\.?\\d*)\\s*(kW|W)/i)
+        const powerMatch = powerStr.match(/(\d+\.?\d*)\s*(kW|W)/i)
         let power = 0
         if (powerMatch) {
           const value = Number(powerMatch[1])

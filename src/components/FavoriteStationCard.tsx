@@ -17,7 +17,7 @@ function isAvailable(status: OutletStatus | null) {
 
 export default function FavoriteStationCard({ station, refreshTrigger }: FavoriteStationCardProps) {
   const [outlets, setOutlets] = useState<Outlet[]>([])
-  const [statuses, setStatuses] = useState<(OutletStatus | null)[]>([])
+  const [statuses, setStatuses] = useState<Record<string, OutletStatus | null>>({})
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -32,12 +32,20 @@ export default function FavoriteStationCard({ station, refreshTrigger }: Favorit
         const stationOutlets = await fetchStationOutlets(station.stationId)
         if (cancelled) return
         setOutlets(stationOutlets)
+        setStatuses(Object.fromEntries(stationOutlets.map((outlet) => [outlet.outletNo, null])))
         if (stationOutlets.length > 0) {
-          const res = await Promise.all(stationOutlets.map((o) => fetchOutletStatus(o.outletNo)))
+          const res = await Promise.allSettled(stationOutlets.map((o) => fetchOutletStatus(o.outletNo)))
           if (cancelled) return
-          setStatuses(res)
+          setStatuses(
+            Object.fromEntries(
+              stationOutlets.map((outlet, index) => [
+                outlet.outletNo,
+                res[index].status === 'fulfilled' ? res[index].value : null
+              ])
+            )
+          )
         } else {
-          setStatuses([])
+          setStatuses({})
         }
       } catch (e) {
         if (!cancelled) showError('加载充电站数据失败')
@@ -53,9 +61,10 @@ export default function FavoriteStationCard({ station, refreshTrigger }: Favorit
 
   const summary = useMemo(() => {
     const total = outlets.length
-    const available = statuses.filter((s) => isAvailable(s)).length
-    return { total, available, occupied: Math.max(0, total - available) }
-  }, [outlets.length, statuses])
+    const available = outlets.filter((outlet) => isAvailable(statuses[outlet.outletNo])).length
+    const unknown = outlets.filter((outlet) => !statuses[outlet.outletNo]?.outlet).length
+    return { total, available, unknown, occupied: Math.max(0, total - available - unknown) }
+  }, [outlets, statuses])
 
   const pinned = isPinned(station.stationId)
 
@@ -96,6 +105,10 @@ export default function FavoriteStationCard({ station, refreshTrigger }: Favorit
             <div className="fav-summary-label">占用</div>
             <div className="fav-summary-value is-warning">{summary.occupied}</div>
           </div>
+          <div className="fav-summary-item">
+            <div className="fav-summary-label">未知</div>
+            <div className="fav-summary-value">{summary.unknown}</div>
+          </div>
         </div>
 
         {outlets.length > 0 && (
@@ -117,9 +130,10 @@ export default function FavoriteStationCard({ station, refreshTrigger }: Favorit
                 {outlets
                   .slice()
                   .sort((a, b) => (a.outletSerialNo ?? 0) - (b.outletSerialNo ?? 0))
-                  .map((outlet, idx) => {
-                    const status = statuses[idx] ?? null
+                  .map((outlet) => {
+                    const status = statuses[outlet.outletNo] ?? null
                     const available = isAvailable(status)
+                    const unknown = !status?.outlet
                     const name =
                       status?.outlet?.vOutletName?.replace('插座', '').trim() ||
                       outlet.vOutletName?.replace('插座', '').trim() ||
@@ -127,15 +141,15 @@ export default function FavoriteStationCard({ station, refreshTrigger }: Favorit
                       outlet.outletNo
 
                     return (
-                      <div key={outlet.outletId} className={`outlet-card is-static ${available ? 'is-available' : 'is-occupied'}`}>
+                      <div key={outlet.outletId} className={`outlet-card is-static ${unknown ? 'is-unknown' : available ? 'is-available' : 'is-occupied'}`}>
                         <div className="outlet-card-top">
                           <div className="outlet-name">{`插座 ${name}`}</div>
-                          <div className={`outlet-badge ${available ? 'is-available' : 'is-occupied'}`}>
-                            {available ? '可用' : '占用'}
+                          <div className={`outlet-badge ${unknown ? 'is-unknown' : available ? 'is-available' : 'is-occupied'}`}>
+                            {unknown ? '未知' : available ? '可用' : '占用'}
                           </div>
                         </div>
                         <div className="outlet-card-bottom">
-                          {!status ? (
+                          {unknown ? (
                             <span className="muted">状态未知</span>
                           ) : available ? (
                             <span className="muted">空闲中</span>

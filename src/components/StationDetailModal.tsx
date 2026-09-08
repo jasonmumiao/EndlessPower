@@ -14,7 +14,7 @@ type StationDetailModalProps = {
   onClose: () => void
 }
 
-type OutletFilter = 'all' | 'available' | 'occupied'
+type OutletFilter = 'all' | 'available' | 'occupied' | 'unknown'
 const OUTLET_FILTER_STORAGE_KEY = 'outlet-filter'
 
 function parseOutletFilter(value: string | null): OutletFilter {
@@ -61,11 +61,11 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
         setOutlets(stationOutlets)
 
         if (stationOutlets.length > 0) {
-          const res = await Promise.all(stationOutlets.map((o) => fetchOutletStatus(o.outletNo)))
+          const res = await Promise.allSettled(stationOutlets.map((o) => fetchOutletStatus(o.outletNo)))
           if (requestIdRef.current !== requestId) return
           const nextMap: Record<string, OutletStatus | null> = {}
           stationOutlets.forEach((outlet, index) => {
-            nextMap[outlet.outletNo] = res[index] ?? null
+            nextMap[outlet.outletNo] = res[index].status === 'fulfilled' ? res[index].value : null
           })
           setStatusByOutletNo(nextMap)
         } else {
@@ -110,7 +110,7 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
     let unknown = 0
     for (const outlet of sortedOutlets) {
       const status = statusByOutletNo[outlet.outletNo] ?? null
-      if (!status) {
+      if (!status?.outlet) {
         unknown += 1
         continue
       }
@@ -124,7 +124,7 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
     if (filter === 'all') return sortedOutlets
     return sortedOutlets.filter((outlet) => {
       const status = statusByOutletNo[outlet.outletNo] ?? null
-      if (!status) return filter === 'unknown'
+      if (!status?.outlet) return filter === 'unknown'
       return filter === (isOutletAvailable(status) ? 'available' : 'occupied')
     })
   }, [filter, sortedOutlets, statusByOutletNo])
@@ -214,9 +214,10 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
 	                <div className="station-filter-row" aria-label="插座筛选">
 	                  <div className="segment" role="tablist">
 	                    {([
-	                      ['all', `全部 ${outletCounts.all}`],
-	                      ['available', `可用 ${outletCounts.available}`],
-	                      ['occupied', `占用 ${outletCounts.occupied}`]
+                      ['all', `全部 ${outletCounts.all}`],
+                      ['available', `可用 ${outletCounts.available}`],
+                      ['occupied', `占用 ${outletCounts.occupied}`],
+                      ['unknown', `未知 ${outletCounts.unknown}`]
 	                    ] as const).map(([key, label]) => (
 	                      <button
 	                        key={key}
@@ -261,8 +262,9 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
                     ) : (
                       visibleOutlets.map((outlet) => {
                         const status = statusByOutletNo[outlet.outletNo] ?? null
-                        const available = status ? isOutletAvailable(status) : false
-                        const statusKind: OutletFilter = available ? 'available' : 'occupied'
+                        const unknown = !status?.outlet
+                        const available = !unknown && isOutletAvailable(status)
+                        const statusKind: OutletFilter = unknown ? 'unknown' : available ? 'available' : 'occupied'
                         const name =
                           status?.outlet?.vOutletName?.replace('插座', '').trim() ||
                           outlet.vOutletName?.replace('插座', '').trim() ||
@@ -272,7 +274,7 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
                         const label = `插座 ${name}`
                         const subtitle = (() => {
                           if (available) return '空闲中'
-                          if (!status) return '未获取状态'
+                          if (unknown) return '未获取状态'
                           const power = status.powerFee?.billingPower ?? '?'
                           const fee = (status.usedfee ?? 0).toFixed(2)
                           const duration = status.usedmin ?? 0
@@ -281,7 +283,7 @@ export default function StationDetailModal({ station, isOpen, onClose }: Station
 
                         const statusChip = (() => {
                           if (available) return <Chip color="success" variant="secondary" size="sm">可用</Chip>
-                          if (!status) return <Chip variant="secondary" size="sm">未知</Chip>
+                          if (unknown) return <Chip variant="secondary" size="sm">未知</Chip>
                           return <Chip color="warning" variant="secondary" size="sm">占用</Chip>
                         })()
 
