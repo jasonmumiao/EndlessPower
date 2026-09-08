@@ -1,10 +1,11 @@
-<!-- This is a placeholder icon file -->
-<!-- Replace with actual 192x192 PNG icon -->
-<!-- Use the icon generator at scripts/generate-icons.html -->
-<!-- Or use online tools to create proper PWA icons -->
-
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
-  <rect width="192" height="192" fill="#3B82F6" rx="28.799999999999997"/>
-  <text x="96" y="96" text-anchor="middle" font-family="Arial, sans-serif" font-size="19.200000000000003" font-weight="bold" fill="white" dy="0.35em">EP</text>
-  <text x="96" y="153.60000000000002" text-anchor="middle" font-family="Arial, sans-serif" font-size="9.600000000000001" fill="white">192x192</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="32" x2="448" y2="480" gradientUnits="userSpaceOnUse"><stop stop-color="#172554"/><stop offset="1" stop-color="#0b1220"/></linearGradient>
+    <linearGradient id="pin" x1="150" y1="92" x2="370" y2="430" gradientUnits="userSpaceOnUse"><stop stop-color="#60a5fa"/><stop offset="1" stop-color="#2563eb"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M256 60c-96.1 0-174 77.9-174 174 0 122.8 174 236 174 236s174-113.2 174-236c0-96.1-77.9-174-174-174Z" fill="url(#pin)"/>
+  <circle cx="256" cy="224" r="106" fill="#0b1220"/>
+  <path d="m278 126-82 116h55l-18 82 83-122h-54l16-76Z" fill="#fbbf24"/>
+  <circle cx="256" cy="224" r="106" fill="none" stroke="#bfdbfe" stroke-opacity=".35" stroke-width="5"/>
 </svg>

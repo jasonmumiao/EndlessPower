@@ -102,12 +102,6 @@ export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // API 反代，解决浏览器端 CORS（同源访问 /api/*）
-    if (url.pathname.startsWith('/api/')) {
-      const upstream = new URL(url.pathname.substring(4) + url.search, 'https://wemp.issks.com')
-      return fetch(new Request(upstream, request))
-    }
-
     // WebSocket 访问者计数端点
     if (url.pathname === '/ws/visitors') {
       // 获取 Durable Object 实例

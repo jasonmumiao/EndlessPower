@@ -8,7 +8,6 @@ import { useSettingsStore } from './settingsStore'
 // 默认位置（WGS84）：由旧版高德(GCJ-02)中心点换算得到
 const MAP_CENTER: [number, number] = [30.757064, 103.933993]
 const BOOT_REVALIDATE_COOLDOWN = 10_000
-let hasBoundApiEvents = false
 
 type RefreshOptions = {
   force?: boolean
@@ -22,7 +21,6 @@ interface StationState {
   lastRefresh: number
   userLocation: [number, number] | null
   searchKeyword: string
-  isUsingSimulatedData: boolean
   isUsingCachedData: boolean
   _hasHydrated: boolean
 
@@ -31,7 +29,6 @@ interface StationState {
   setLoading: (loading: boolean) => void
   setUserLocation: (location: [number, number] | null) => void
   setSearchKeyword: (keyword: string) => void
-  setSimulatedData: (isSimulated: boolean) => void
   setCachedDataStatus: (isCached: boolean) => void
   initializeStations: () => Promise<void>
   refreshStations: (lat?: number, lng?: number, options?: RefreshOptions) => Promise<void>
@@ -57,12 +54,6 @@ function getCurrentPosition(options: PositionOptions): Promise<GeolocationPositi
 export const useStationStore = create<StationState>()(
   persist(
     (set, get) => {
-      if (typeof window !== 'undefined' && !hasBoundApiEvents) {
-        hasBoundApiEvents = true
-        window.addEventListener('api-fallback-to-simulation', () => set({ isUsingSimulatedData: true }))
-        window.addEventListener('api-using-real-data', () => set({ isUsingSimulatedData: false }))
-      }
-
       return {
         stations: [],
         isLoading: false,
@@ -70,7 +61,6 @@ export const useStationStore = create<StationState>()(
         lastRefresh: 0,
         userLocation: null,
         searchKeyword: '',
-        isUsingSimulatedData: false,
         isUsingCachedData: false,
         _hasHydrated: false,
 
@@ -78,7 +68,6 @@ export const useStationStore = create<StationState>()(
         setLoading: (loading: boolean) => set({ isLoading: loading }),
         setUserLocation: (location: [number, number] | null) => set({ userLocation: location }),
         setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
-        setSimulatedData: (isSimulated: boolean) => set({ isUsingSimulatedData: isSimulated }),
         setCachedDataStatus: (isCached: boolean) => set({ isUsingCachedData: isCached }),
 
         // 初始化：有缓存则先展示缓存，再在后台拉取最新；无缓存则显示加载态。

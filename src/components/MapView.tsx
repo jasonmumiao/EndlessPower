@@ -4,6 +4,7 @@ import { Button, Card } from '@heroui/react'
 import { useStationStore } from '../store/stationStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useThemeStore } from '../store/themeStore'
+import { useErrorStore } from '../store/errorStore'
 import { useVisitorsCount } from '../hooks/useVisitorsCount'
 import type { Station } from '../types/station'
 import { getColorForAvailability } from '../utils/api'
@@ -11,7 +12,7 @@ import SearchBar from './SearchBar'
 import StationDetailModal from './StationDetailModal'
 import LoadingSpinner from './LoadingSpinner'
 import CampusMapModal from './CampusMapModal'
-import { CampusIcon, QrCodeIcon, RefreshIcon } from './icons'
+import { CampusIcon, LocateIcon, QrCodeIcon, RefreshIcon } from './icons'
 
 // 默认位置（WGS84）：由旧版高德(GCJ-02)中心点换算得到
 const MAP_CENTER: [number, number] = [30.757064, 103.933993]
@@ -197,6 +198,32 @@ function getStationMarkerColor(station: Station, isUsingCachedData: boolean) {
   return getColorForAvailability(free / total)
 }
 
+function requestCurrentLocation(): Promise<[number, number]> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('当前浏览器不支持定位'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve([position.coords.latitude, position.coords.longitude]),
+      reject,
+      { enableHighAccuracy: true, timeout: 8_000, maximumAge: 60_000 }
+    )
+  })
+}
+
+function getLocationErrorMessage(error: unknown) {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? Number((error as { code?: unknown }).code)
+    : undefined
+
+  if (code === 1) return '请允许浏览器使用定位权限后重试'
+  if (code === 2) return '暂时无法获取当前位置，请稍后重试'
+  if (code === 3) return '定位超时，请检查系统定位服务后重试'
+  return error instanceof Error ? error.message : '无法获取当前位置，请稍后重试'
+}
+
 export default function MapView() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -208,8 +235,10 @@ export default function MapView() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null)
   const [campusOpen, setCampusOpen] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
+  const [refreshClock, setRefreshClock] = useState(0)
 
   const { isDark } = useThemeStore()
+  const showError = useErrorStore((state) => state.showError)
   const { showUnavailableStations, autoRefresh, refreshInterval, baseMapStyle } = useSettingsStore()
   const { visitorsCount, isConnected } = useVisitorsCount()
   const {
@@ -217,6 +246,7 @@ export default function MapView() {
     getFilteredStations,
     isLoading,
     isRefreshing,
+    lastRefresh,
     refreshStations,
     canRefresh,
     userLocation,
@@ -227,6 +257,16 @@ export default function MapView() {
   const stations = getFilteredStations()
   const hideMapControls = Boolean(selectedStation || campusOpen)
   const hasAnyStations = allStations.length > 0
+
+  // 冷却结束时主动触发一次重渲染，避免刷新按钮永久停留在禁用状态。
+  useEffect(() => {
+    const cooldownMs = Math.max(3_000, refreshInterval * 1_000)
+    const remainingMs = lastRefresh + cooldownMs - Date.now()
+    if (remainingMs <= 0) return
+
+    const id = window.setTimeout(() => setRefreshClock((value) => value + 1), remainingMs + 20)
+    return () => window.clearTimeout(id)
+  }, [lastRefresh, refreshInterval])
 
   const displayStations = useMemo(() => {
     // 使用缓存数据时（灰色状态），显示所有站点，不过滤
@@ -413,6 +453,27 @@ export default function MapView() {
     })
   }, [displayStations, isUsingCachedData])
 
+  const handleLocate = async () => {
+    const map = mapRef.current
+    if (!map || isLocating) return
+
+    if (userLocation) {
+      map.easeTo({ center: [userLocation[1], userLocation[0]], duration: 650, essential: true })
+      return
+    }
+
+    setIsLocating(true)
+    try {
+      const loc = await requestCurrentLocation()
+      setStoreUserLocation(loc)
+      map.easeTo({ center: [loc[1], loc[0]], duration: 650, essential: true })
+    } catch (error) {
+      showError(getLocationErrorMessage(error))
+    } finally {
+      setIsLocating(false)
+    }
+  }
+
   const handleRefresh = async () => {
     if (!canRefresh()) return
     setIsLocating(true)
@@ -422,8 +483,9 @@ export default function MapView() {
           navigator.geolocation.getCurrentPosition(
             async (pos) => {
               const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+              // 手动刷新不应触发“首次定位自动居中”。
+              restoredViewRef.current = true
               setStoreUserLocation(loc)
-              mapRef.current?.easeTo({ center: [loc[1], loc[0]], zoom: 16, duration: 800 })
               await refreshStations(loc[0], loc[1])
               resolve()
             },
@@ -442,9 +504,10 @@ export default function MapView() {
     }
   }
 
-  const refreshReady = canRefresh()
+  const refreshReady = useMemo(() => canRefresh(), [canRefresh, refreshClock])
   const refreshDisabled = isLoading || isRefreshing || isLocating || !refreshReady
   const showLoadingOverlay = isLocating || (isLoading && !hasAnyStations)
+  const loadingLabel = isLocating && !isRefreshing ? '正在定位…' : '刷新状态…'
 
   return (
     <div className="map-view" data-testid="map-view">
@@ -506,6 +569,18 @@ export default function MapView() {
             isIconOnly
             size="lg"
             variant="secondary"
+            className={`fab fab-locate ${isLocating ? 'is-loading' : ''}`}
+            onPress={handleLocate}
+            isDisabled={isLocating}
+            aria-label={isLocating ? '定位中' : '回到当前位置'}
+          >
+            <LocateIcon size={22} />
+          </Button>
+
+          <Button
+            isIconOnly
+            size="lg"
+            variant="secondary"
             className="fab fab-scan"
             onPress={() => {
               try {
@@ -526,7 +601,7 @@ export default function MapView() {
             className={`fab fab-refresh ${isLoading || isRefreshing || isLocating ? 'is-loading' : ''}`}
             onPress={handleRefresh}
             isDisabled={refreshDisabled}
-            aria-label={!refreshReady ? '刷新冷却中' : isLoading || isRefreshing || isLocating ? '刷新中' : '刷新并定位'}
+            aria-label={!refreshReady ? '刷新冷却中' : isLoading || isRefreshing || isLocating ? '刷新中' : '刷新'}
           >
             <RefreshIcon size={22} />
           </Button>
@@ -534,7 +609,7 @@ export default function MapView() {
 
         {showLoadingOverlay && (
           <div className="map-center">
-            <LoadingSpinner label="刷新状态…" />
+            <LoadingSpinner label={loadingLabel} />
           </div>
         )}
       </div>

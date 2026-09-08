@@ -11,8 +11,7 @@ export const ENV_CONFIG = {
     enableDebugLogs:
       import.meta.env.DEV ||
       (typeof window !== 'undefined' && window.location.hostname.includes('-dev')),
-    corsRetryAttempts: 5,
-    fallbackToSimulation: true
+    corsRetryAttempts: 5
   },
 
   pwaConfig: {
@@ -25,4 +24,3 @@ export const ENV_CONFIG = {
 
 export const IS_DEV = ENV_CONFIG.isDevelopment
 export const ENABLE_DEBUG = ENV_CONFIG.apiConfig.enableDebugLogs
-

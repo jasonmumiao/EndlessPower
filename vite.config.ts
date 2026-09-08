@@ -67,14 +67,7 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
-    open: !isAutomatedRun,
-    proxy: {
-      '/api': {
-        target: 'https://wemp.issks.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
+    open: !isAutomatedRun
   },
   build: {
     outDir: 'dist',

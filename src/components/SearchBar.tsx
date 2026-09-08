@@ -11,7 +11,7 @@ type SearchBarProps = {
 }
 
 export default function SearchBar({ onStationSelect, visitorsCount, isConnected }: SearchBarProps) {
-  const { searchKeyword, setSearchKeyword, isUsingSimulatedData, getFilteredStations } = useStationStore()
+  const { searchKeyword, setSearchKeyword, getFilteredStations } = useStationStore()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -53,9 +53,9 @@ export default function SearchBar({ onStationSelect, visitorsCount, isConnected 
       >
         <SearchField.Group className="search-group">
           <SearchField.SearchIcon />
-          <SearchField.Input placeholder={isUsingSimulatedData ? '搜索充电站（模拟数据）…' : '搜索充电站…'} />
+          <SearchField.Input placeholder="搜索充电站…" />
           {visitorsCount !== undefined && (
-            <Chip color={isConnected ? 'success' : 'default'} variant="flat" size="sm" className="search-online-chip">
+            <Chip color={isConnected ? 'success' : 'default'} variant="secondary" size="sm" className="search-online-chip">
               <span className="online-chip">
                 <UsersIcon size={14} aria-hidden="true" />
                 <span className="online-chip-value">{isConnected ? visitorsCount : '—'}</span>

@@ -1,31 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Background -->
-  <rect width="512" height="512" fill="#3B82F6" rx="80"/>
-  
-  <!-- Charging Station Body -->
-  <rect x="180" y="150" width="80" height="200" fill="white" rx="8"/>
-  
-  <!-- Screen -->
-  <rect x="190" y="170" width="60" height="40" fill="#1E40AF" rx="4"/>
-  
-  <!-- Charging Port -->
-  <circle cx="220" cy="240" r="15" fill="#10B981"/>
-  <circle cx="220" cy="240" r="8" fill="white"/>
-  
-  <!-- Cable -->
-  <path d="M235 240 Q260 240 280 260 Q300 280 320 280" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
-  
-  <!-- Plug -->
-  <rect x="315" y="270" width="20" height="20" fill="white" rx="4"/>
-  <rect x="320" y="275" width="10" height="10" fill="#3B82F6" rx="2"/>
-  
-  <!-- Lightning Bolt -->
-  <path d="M210 280 L225 290 L215 305 L230 315 L215 330 L200 320 L210 305 L195 295 Z" fill="#FBBF24"/>
-  
-  <!-- Base -->
-  <rect x="170" y="350" width="100" height="30" fill="white" rx="15"/>
-  
-  <!-- Text -->
-  <text x="256" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white">EP</text>
-  <text x="256" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">EndlessPower</text>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="32" x2="448" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172554"/>
+      <stop offset="1" stop-color="#0b1220"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="150" y1="92" x2="370" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(256 194) rotate(90) scale(224)">
+      <stop stop-color="#34d399" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#34d399" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#020617" flood-opacity=".42"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="194" r="224" fill="url(#glow)"/>
+  <g fill="none" stroke="#93c5fd" stroke-linecap="round" opacity=".18">
+    <path d="M48 364 172 240l72 72 118-118 102 102" stroke-width="12"/>
+    <path d="M80 432 184 328l62 62 92-92 94 94" stroke-width="8"/>
+  </g>
+  <path d="M256 60c-96.1 0-174 77.9-174 174 0 122.8 174 236 174 236s174-113.2 174-236c0-96.1-77.9-174-174-174Z" fill="url(#pin)" filter="url(#shadow)"/>
+  <circle cx="256" cy="224" r="106" fill="#0b1220"/>
+  <path d="m278 126-82 116h55l-18 82 83-122h-54l16-76Z" fill="#fbbf24"/>
+  <circle cx="256" cy="224" r="106" fill="none" stroke="#bfdbfe" stroke-opacity=".35" stroke-width="5"/>
 </svg>

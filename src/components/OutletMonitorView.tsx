@@ -227,7 +227,7 @@ export default function OutletMonitorView({ onBack }: OutletMonitorViewProps) {
     <div className="monitor-view" data-testid="monitor-view">
       <div className="page-inner monitor-inner">
         <div className="monitor-header">
-          <Button variant="secondary" onPress={onBack}>
+          <Button className="monitor-back-button" variant="secondary" onPress={onBack}>
             返回
           </Button>
 

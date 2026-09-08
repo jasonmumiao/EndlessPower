@@ -15,7 +15,7 @@
 - HeroUI v3：`@heroui/react` + `@heroui/styles`
 - MapLibre GL JS
 - Zustand
-- Cloudflare Workers（静态资源 + `/api/*` 反代 + 访问者计数 WebSocket）
+- Cloudflare Workers（静态资源 + 访问者计数 WebSocket）
 - Playwright（E2E）
 
 > 说明：项目不依赖 Tailwind 做 UI 开发，但 HeroUI v3 的样式构建仍需要 Tailwind 作为构建依赖。
@@ -49,4 +49,3 @@ npm run build
 ## 🔧 环境变量
 
 - `VITE_MAP_STYLE`：覆盖地图样式 URL（用于 E2E / 自定义底图）
-- `VITE_USE_SIMULATED_DATA=1`：仅开发模式启用 API 模拟数据；生产构建始终在 API 失败时报告错误。
